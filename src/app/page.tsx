@@ -28,7 +28,7 @@ export default function Home() {
   const [error, setError] = useState<string | null>(null);
   const [progressSteps, setProgressSteps] = useState<ProgressStep[]>([
     { id: 'fetch', label: 'Fetching selected features', status: 'pending' },
-    { id: 'ai', label: 'Generating slide content with GRIPG AI', status: 'pending' },
+    { id: 'ai', label: 'Generating slide content with WRIPG AI', status: 'pending' },
     { id: 'diagrams', label: 'Rendering workflow diagrams', status: 'pending' },
     { id: 'assemble', label: 'Assembling PowerPoint deck', status: 'pending' },
     { id: 'ready', label: 'Deck ready for download', status: 'pending' },
@@ -122,7 +122,7 @@ export default function Home() {
       const byteArray = new Uint8Array(byteNumbers);
       const blob = new Blob([byteArray], { type: 'application/vnd.openxmlformats-officedocument.presentationml.presentation' });
       const blobUrl = URL.createObjectURL(blob);
-      
+
       setDownloadUrl(blobUrl);
 
       setStepStatus('assemble', 'done', 'Presentation assembled');
