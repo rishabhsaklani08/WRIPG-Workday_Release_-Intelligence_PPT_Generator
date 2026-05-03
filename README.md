@@ -1,6 +1,6 @@
-# Workday Zenith: Release Intelligence PPT Generator (WRIPG)
+# Workday Release Intelligence PPT Generator (WRIPG)
 
-**Workday Zenith** is a high-performance, AI-driven automation tool designed to transform raw Workday "What's New" release data into professional, executive-ready PowerPoint presentations. Built for Workday consultants, administrators, and executives, it eliminates hours of manual deck building by leveraging Large Language Models (LLMs) to synthesize business impacts, configuration steps, and workflow diagrams.
+**WRIPG** is a high-performance, AI-driven automation tool designed to transform raw Workday "What's New" release data into professional, executive-ready PowerPoint presentations. Built for Workday consultants, administrators, and executives, it eliminates hours of manual deck building by leveraging Large Language Models (LLMs) to synthesize business impacts, configuration steps, and workflow diagrams.
 
 ---
 
