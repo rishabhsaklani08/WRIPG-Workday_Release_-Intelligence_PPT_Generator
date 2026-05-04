@@ -1,6 +1,6 @@
 /**
  * Generates a high-quality diagram image from Mermaid syntax.
- * Uses the external mermaid.ink service with high-DPI scaling for premium output.
+ * Uses the mermaid.ink service to render a high-DPI PNG image.
  */
 export async function generateDiagramUrl(diagramDefinition: string): Promise<string | null> {
   if (!diagramDefinition || diagramDefinition.trim() === '') {
@@ -8,71 +8,73 @@ export async function generateDiagramUrl(diagramDefinition: string): Promise<str
   }
 
   try {
-    // 1. Clean the definition (remove markdown wrappers if the LLM included them)
+    // 1. Strip any markdown fences
     let cleanDef = diagramDefinition.trim();
-    if (cleanDef.startsWith('```mermaid')) {
-      cleanDef = cleanDef.replace(/^```mermaid\n/, '').replace(/\n```$/, '');
+    if (cleanDef.includes('```mermaid')) {
+      cleanDef = cleanDef.replace(/```mermaid\s*/gi, '').replace(/```/g, '').trim();
     } else if (cleanDef.startsWith('```')) {
-      cleanDef = cleanDef.replace(/^```\n/, '').replace(/\n```$/, '');
+      cleanDef = cleanDef.replace(/```/g, '').trim();
     }
 
-    // 2. Inject a premium theme config at the top of the mermaid definition
-    //    This uses Mermaid's built-in "base" theme with custom variables for a
-    //    clean, professional look matching our brand palette.
+    // Strip any existing %%{init}%% blocks so we can inject our own clean one
+    cleanDef = cleanDef.replace(/%%\{[\s\S]*?\}%%\s*/g, '').trim();
+
+    if (!cleanDef) return null;
+
+    // 2. Inject premium WRIPG theme
+    // We use a high base fontSize (32px) and the 'img' endpoint with width=2400
+    // to simulate a retina/4k export since PPT's SVG parser doesn't support HTML labels.
     const themedDef = `%%{init: {
   "theme": "base",
   "themeVariables": {
-    "primaryColor": "#A100FF",
-    "primaryTextColor": "#FFFFFF",
-    "primaryBorderColor": "#7B00C4",
+    "primaryColor": "#F0D9FF",
+    "primaryTextColor": "#1A1A2E",
+    "primaryBorderColor": "#A100FF",
     "lineColor": "#9999AA",
     "secondaryColor": "#1A1A2E",
-    "tertiaryColor": "#2D2D44",
-    "background": "#F5F5F8",
-    "mainBkg": "#F5F5F8",
-    "nodeBorder": "#A100FF",
-    "clusterBkg": "#F0D9FF",
-    "titleColor": "#1A1A2E",
-    "edgeLabelBackground": "#FFFFFF",
-    "fontSize": "18px",
+    "tertiaryColor": "#F5F5F8",
+    "fontSize": "32px",
     "fontFamily": "Arial, sans-serif"
   }
 }}%%
 ${cleanDef}`;
 
-    // 3. Base64 encode the themed diagram definition
-    const buffer = Buffer.from(themedDef, 'utf-8');
-    const base64Str = buffer.toString('base64');
+    // 3. Base64-encode the definition
+    const encoded = Buffer.from(themedDef, 'utf-8').toString('base64');
+    
+    // 4. Fetch High-Res PNG.
+    // SVG had issues in PowerPoint because PPT doesn't support <foreignObject> tags.
+    // By requesting a width of 2400px, mermaid.ink's puppeteer engine renders a crisp PNG.
+    const url = `https://mermaid.ink/img/${encoded}?bgColor=F5F5F8&width=2400`;
 
-    // 4. Use mermaid.ink with scale=3 for high-DPI / retina-quality PNG
-    //    bgColor=white ensures the background is clean white for embedding in PPTX.
-    const url = `https://mermaid.ink/img/${base64Str}?bgColor=F5F5F8&scale=3`;
-
-    // 5. Verify the image is valid by fetching it (with a timeout)
     const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 15000); // 15s timeout
-    const response = await fetch(url, { signal: controller.signal });
-    clearTimeout(timeout);
-
-    if (!response.ok) {
-      console.warn(`[diagram-renderer] mermaid.ink failed. Status: ${response.status}. Trying fallback…`);
-      // Fallback: try the simpler URL without theme injection
-      const fallbackBase64 = Buffer.from(cleanDef, 'utf-8').toString('base64');
-      const fallbackUrl = `https://mermaid.ink/img/${fallbackBase64}?bgColor=F5F5F8&scale=2`;
-      const fallbackRes = await fetch(fallbackUrl);
-      if (!fallbackRes.ok) return null;
-      const fallbackBuffer = await fallbackRes.arrayBuffer();
-      const fallbackImg = Buffer.from(fallbackBuffer).toString('base64');
-      return `data:image/png;base64,${fallbackImg}`;
+    const timer = setTimeout(() => controller.abort(), 15000);
+    let response: Response;
+    try {
+      response = await fetch(url, { signal: controller.signal });
+    } finally {
+      clearTimeout(timer);
     }
 
-    // 6. Download the image and convert to base64 data URI for pptxgenjs
-    const arrayBuffer = await response.arrayBuffer();
-    const imageBase64 = Buffer.from(arrayBuffer).toString('base64');
-    return `data:image/png;base64,${imageBase64}`;
+    if (!response.ok) {
+      console.warn(`[diagram-renderer] Hi-Res PNG fetch failed (${response.status}), trying fallback without theme…`);
+      const fallbackEncoded = Buffer.from(cleanDef, 'utf-8').toString('base64');
+      const fallbackUrl = `https://mermaid.ink/img/${fallbackEncoded}?bgColor=F5F5F8&width=1600`;
+      const fallbackRes = await fetch(fallbackUrl);
+      if (!fallbackRes.ok) return null;
+      
+      const fallbackBuffer = await fallbackRes.arrayBuffer();
+      const fallbackBase64 = Buffer.from(fallbackBuffer).toString('base64');
+      return `data:image/png;base64,${fallbackBase64}`;
+    }
+
+    // 5. Convert PNG buffer to base64 data URI
+    const imgBuffer = await response.arrayBuffer();
+    const imgBase64 = Buffer.from(imgBuffer).toString('base64');
+    return `data:image/png;base64,${imgBase64}`;
 
   } catch (error) {
-    console.error('[diagram-renderer] Error generating diagram:', error);
+    console.error('[diagram-renderer] Error:', error);
     return null;
   }
 }

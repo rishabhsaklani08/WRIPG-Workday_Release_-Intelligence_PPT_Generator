@@ -4,23 +4,23 @@ import { generateDiagramUrl } from './diagram-renderer';
 
 // ─── Brand Palette ────────────────────────────────────────────────────────────
 const C = {
-  black:       '000000',
-  white:       'FFFFFF',
-  purple:      'A100FF',
-  purpleDark:  '7B00C4',
+  black: '000000',
+  white: 'FFFFFF',
+  purple: 'A100FF',
+  purpleDark: '7B00C4',
   purpleLight: 'F0D9FF',
-  navy:        '0D0D1A',
-  navyMid:     '1A1A2E',
-  navyLight:   '2D2D44',
-  gray100:     'F5F5F8',
-  gray200:     'E8E8F0',
-  gray400:     '9999AA',
-  gray600:     '555566',
-  textDark:    '1A1A2E',
-  textMid:     '444455',
-  green:       '00B876',
-  amber:       'F4A124',
-  red:         'E04545',
+  navy: '0D0D1A',
+  navyMid: '1A1A2E',
+  navyLight: '2D2D44',
+  gray100: 'F5F5F8',
+  gray200: 'E8E8F0',
+  gray400: '9999AA',
+  gray600: '555566',
+  textDark: '1A1A2E',
+  textMid: '444455',
+  green: '00B876',
+  amber: 'F4A124',
+  red: 'E04545',
 };
 
 // Standard 16:9 canvas — 10" × 5.625" (PowerPoint default widescreen)
@@ -107,9 +107,9 @@ function buildCoverSlide(pres: PptxGenJS, opts: PresentationOptions, total: numb
   slide.addText(today, { x: M, y: 3.62, w: 4, h: 0.28, fontSize: 10, color: C.gray400, fontFace: 'Arial' });
 
   // Watermark footer
-  slide.addText('Confidential — Accenture Workday Practice', {
-    x: M, y: H - 0.4, w: W - 2 * M, h: 0.28, fontSize: 9, color: C.gray400, fontFace: 'Arial', align: 'left',
-  });
+  // slide.addText('Confidential — Accenture Workday Practice', {
+  //   x: M, y: H - 0.4, w: W - 2 * M, h: 0.28, fontSize: 9, color: C.gray400, fontFace: 'Arial', align: 'left',
+  // });
 }
 
 // ─── TABLE OF CONTENTS ────────────────────────────────────────────────────────
@@ -129,19 +129,38 @@ function buildTOCSlide(pres: PptxGenJS, slides: SlideContent[], opts: Presentati
   const useTwo = slides.length > 8;
 
   const renderColumn = (items: SlideContent[], startIndex: number, colX: number, colW: number) => {
+    // Fixed column widths to prevent overflow
+    const numW = 0.45;  // slide number
+    const idW = 1.3;   // feature ID (right side)
+    const titleW = colW - numW - idW - 0.1; // remaining width for title
+
     items.forEach((s, i) => {
       const rowY = 1.05 + i * 0.38;
       if (rowY + 0.38 > H - 0.4) return; // safety: skip if out of bounds
-      if (i % 2 === 0) rect(slide, colX - 0.05, rowY, colW + 0.1, 0.36, C.gray100);
-      rect(slide, colX - 0.05, rowY, 0.04, 0.36, C.purple);
-      slide.addText(`${String(startIndex + i + 1).padStart(2, '0')}`, {
-        x: colX + 0.06, y: rowY + 0.05, w: 0.38, h: 0.26, fontSize: 12, bold: true, color: C.purple, fontFace: 'Arial',
+
+      // Alternating row background
+      if (i % 2 === 0) rect(slide, colX, rowY, colW, 0.36, C.gray100);
+      // Purple left accent
+      rect(slide, colX, rowY, 0.04, 0.36, C.purple);
+
+      // Slide number
+      slide.addText(String(startIndex + i + 1).padStart(2, '0'), {
+        x: colX + 0.08, y: rowY + 0.05, w: numW, h: 0.26,
+        fontSize: 12, bold: true, color: C.purple, fontFace: 'Arial', align: 'left',
       });
-      slide.addText(s.title.length > 55 ? s.title.slice(0, 52) + '…' : s.title, {
-        x: colX + 0.45, y: rowY + 0.06, w: colW - 0.8, h: 0.24, fontSize: 10, color: C.textDark, fontFace: 'Arial',
+
+      // Title — truncated to fit exactly within titleW
+      const maxChars = Math.floor(titleW * 13); // ~13 chars per inch at 10pt
+      const title = s.title.length > maxChars ? s.title.slice(0, maxChars - 1) + '…' : s.title;
+      slide.addText(title, {
+        x: colX + numW + 0.08, y: rowY + 0.06, w: titleW, h: 0.26,
+        fontSize: 10, color: C.textDark, fontFace: 'Arial', align: 'left',
       });
+
+      // Feature ID — right-aligned in its own fixed-width column
       slide.addText(s.featureId, {
-        x: colX + colW - 0.38, y: rowY + 0.06, w: 0.38, h: 0.24, fontSize: 8, color: C.gray400, fontFace: 'Arial', align: 'right',
+        x: colX + numW + titleW + 0.1, y: rowY + 0.06, w: idW, h: 0.26,
+        fontSize: 8.5, color: C.gray400, fontFace: 'Arial', align: 'right',
       });
     });
   };
@@ -169,8 +188,8 @@ async function buildFeatureSlide(
   meta?: { domain?: string; complexity?: string; optIn?: boolean; productionDate?: string }
 ) {
   const slide = pres.addSlide();
-  const domain  = meta?.domain ?? 'General';
-  const dColor  = domainColor(domain);
+  const domain = meta?.domain ?? 'General';
+  const dColor = domainColor(domain);
 
   // White background
   rect(slide, 0, 0, W, H, C.white);
@@ -284,14 +303,23 @@ async function buildFeatureSlide(
 
   // ── RIGHT COLUMN ──
   // Divide into three areas: config steps (45%), prerequisites (25%), risks (30%)
-  const configH  = BODY_H * 0.45;
-  const prereqH  = BODY_H * 0.25;
-  const risksH   = BODY_H * 0.30 - SEC_GAP * 2;
+  const configH = BODY_H * 0.45;
+  const prereqH = BODY_H * 0.25;
+  const risksH = BODY_H * 0.30 - SEC_GAP * 2;
 
   // Config Steps
   textY = sectionHeader(C2X, BODY_Y, C2W, 'CONFIGURATION STEPS', C.amber);
-  const stepBullets = (content.configSteps ?? []).slice(0, 8).map((s, i) => ({ text: `${i + 1}.  ${s}`, options: { breakLine: true } }));
-  slide.addText(stepBullets.length ? stepBullets : [{ text: 'No configuration steps required.', options: { breakLine: false } }], {
+  const stepBullets = (content.configSteps ?? []).slice(0, 8).map((s) => {
+    const cleanStr = s.trim();
+    // If string already starts with "Step 1" or "1.", just use a standard bullet
+    if (/^(Step\s*\d+|[0-9]+\.)/i.test(cleanStr)) {
+      return { text: `·  ${cleanStr}`, options: { breakLine: true } };
+    }
+    // Otherwise, prepend standard bullet
+    return { text: `·  ${cleanStr}`, options: { breakLine: true } };
+  });
+
+  slide.addText(stepBullets.length ? stepBullets : [{ text: '·  No configuration steps required.', options: { breakLine: false } }], {
     x: C2X, y: textY, w: C2W, h: configH - 0.28,
     fontSize: 9, color: C.textDark, fontFace: 'Arial', valign: 'top',
   });
@@ -402,10 +430,10 @@ export async function buildPresentation(
 ): Promise<ArrayBuffer> {
 
   const pres = new PptxGenJS();
-  pres.layout  = 'LAYOUT_16x9';
+  pres.layout = 'LAYOUT_16x9';
   pres.company = 'Accenture';
-  pres.title   = `Workday ${options.releaseVersion} Release Intelligence — ${options.clientName}`;
-  pres.author  = 'WRIPG by Accenture';
+  pres.title = `Workday ${options.releaseVersion} Release Intelligence — ${options.clientName}`;
+  pres.author = 'WRIPG by Accenture';
   pres.subject = `Release ${options.releaseVersion} | ${options.audienceMode} view`;
 
   buildCoverSlide(pres, options, slides.length);
@@ -413,7 +441,7 @@ export async function buildPresentation(
 
   for (let i = 0; i < slides.length; i++) {
     const content = slides[i];
-    const meta    = featuresMeta?.[i];
+    const meta = featuresMeta?.[i];
     await buildFeatureSlide(pres, content, i + 1, options, meta);
     if (content.diagramType === 'mermaid' && content.diagramDefinition) {
       await buildDiagramSlide(pres, content, i + 1, options);
