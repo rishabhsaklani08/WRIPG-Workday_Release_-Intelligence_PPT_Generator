@@ -1,6 +1,6 @@
 import PptxGenJS from 'pptxgenjs';
 import { SlideContent, PresentationOptions } from '../types';
-import { generateDiagramUrl } from './diagram-renderer';
+
 
 // ─── Brand Palette ────────────────────────────────────────────────────────────
 const C = {
@@ -348,39 +348,7 @@ async function buildFeatureSlide(
     { color: C.gray200, fontFace: 'Arial', valign: 'middle' }, 9.5, 7.5);
 }
 
-// ─── DIAGRAM SLIDE ────────────────────────────────────────────────────────────
-async function buildDiagramSlide(
-  pres: PptxGenJS, content: SlideContent, slideNum: number, opts: PresentationOptions
-) {
-  const imgDataUri = await generateDiagramUrl(content.diagramDefinition ?? '');
-  if (!imgDataUri) return;
 
-  const slide = pres.addSlide();
-  rect(slide, 0, 0, W, H, C.gray100);
-
-  // Header bar
-  rect(slide, 0, 0, W, 0.82, C.navyMid);
-  rect(slide, 0, 0, W, 0.05, C.purple);
-  slide.addText(`Workflow Diagram`, { x: M, y: 0.06, w: 3.5, h: 0.42, fontSize: 13, bold: true, color: C.white, fontFace: 'Arial', valign: 'middle' });
-  slide.addText(`${content.title}`, { x: M, y: 0.44, w: W - 2 * M, h: 0.3, fontSize: 9, color: C.gray400, fontFace: 'Arial' });
-  rect(slide, W - 1.2, 0.12, 0.85, 0.58, C.purple);
-  slide.addText(`#${String(slideNum).padStart(2, '0')}`, { x: W - 1.2, y: 0.12, w: 0.85, h: 0.58, fontSize: 12, bold: true, color: C.white, fontFace: 'Arial', align: 'center', valign: 'middle' });
-
-  // Diagram image — safe bounds
-  const IMG_Y = 0.98;
-  const IMG_H = H - IMG_Y - 0.38;
-  slide.addImage({
-    data: imgDataUri,
-    x: M, y: IMG_Y, w: W - 2 * M, h: IMG_H,
-    sizing: { type: 'contain', w: W - 2 * M, h: IMG_H },
-  });
-
-  // Footer
-  rect(slide, 0, H - 0.32, W, 0.32, C.navyMid);
-  slide.addText(`${content.featureId}  ·  ${opts.clientName}  ·  ${opts.releaseVersion}`, {
-    x: M, y: H - 0.28, w: W - 2 * M, h: 0.22, fontSize: 8, color: C.gray400, fontFace: 'Arial', align: 'left',
-  });
-}
 
 // ─── SUMMARY SLIDE ────────────────────────────────────────────────────────────
 function buildSummarySlide(pres: PptxGenJS, opts: PresentationOptions) {
@@ -443,9 +411,7 @@ export async function buildPresentation(
     const content = slides[i];
     const meta = featuresMeta?.[i];
     await buildFeatureSlide(pres, content, i + 1, options, meta);
-    if (content.diagramType === 'mermaid' && content.diagramDefinition) {
-      await buildDiagramSlide(pres, content, i + 1, options);
-    }
+
   }
 
   buildSummarySlide(pres, options);

@@ -38,7 +38,7 @@ export default function ProgressTracker({ steps, error, downloadUrl, slidesPrevi
       <p style={{ color: 'var(--text-secondary)', fontSize: 14, marginBottom: 28 }}>
         {isComplete ? 'Preview your slides below, then download the PowerPoint.'
           : error ? 'Something went wrong. See details below.'
-            : 'GRIPG AI is enriching your content. This usually takes less than 10 seconds.'}
+            : 'WRIPG AI is enriching your content. This usually takes less than 30 seconds.'}
       </p>
 
       {/* Steps list */}
@@ -96,11 +96,7 @@ export default function ProgressTracker({ steps, error, downloadUrl, slidesPrevi
                 {(slide.keyBenefits ?? []).slice(0, 3).map((b: string, bi: number) => (
                   <div key={bi} style={{ fontSize: 11, color: '#4ade80', marginBottom: 3 }}>✓ {b}</div>
                 ))}
-                {slide.diagramType === 'mermaid' && (
-                  <div style={{ display: 'inline-block', marginTop: 8, padding: '3px 8px', background: 'rgba(34,197,94,0.15)', color: '#4ade80', fontSize: 11, borderRadius: 6, fontWeight: 600 }}>
-                    📊 Workflow Diagram Included
-                  </div>
-                )}
+
               </div>
             ))}
           </div>

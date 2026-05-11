@@ -26,8 +26,6 @@ export interface SlideContent {
   risks: string;              // Known risks / change management considerations
   userAction: string;         // Single clear call-to-action sentence
   timeline: string;           // Go-live timeline / availability info
-  diagramType: 'mermaid' | 'none';
-  diagramDefinition: string;
 }
 
 export type AudienceMode = 'consultant' | 'executive' | 'admin';
